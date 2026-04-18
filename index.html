@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=yes" />
+<title>Contai - Gestão de Eventos</title>
+<link rel="stylesheet" href="style.css" />
+<link href="https://fonts.googleapis.com/css2?family=Playfair+Display:wght@400;600&family=DM+Sans:ital,wght@0,300;0,400;0,500;1,400&display=swap" rel="stylesheet" />
+</head>
+<body>
+<div id="app">
+
+  <header>
+    <div class="logo">Cont<span>ai</span></div>
+    <div id="page-title">Novo evento</div>
+  </header>
+
+  <div id="content">
+
+    <!-- PÁGINA: NOVO EVENTO -->
+    <div class="page active" id="page-novo">
+      <div class="card">
+        <div class="card-title">Dados do evento</div>
+        <div class="fields-grid">
+          <div class="field">
+            <label>Nome do evento *</label>
+            <input type="text" id="ev-nome" placeholder="Ex: Festa de sábado" />
+          </div>
+          <div class="field">
+            <label>Data</label>
+            <input type="date" id="ev-data" />
+          </div>
+          <div class="field">
+            <label>Responsável</label>
+            <input type="text" id="ev-resp" placeholder="Nome do responsável" />
+          </div>
+          <div class="field">
+            <label>Receita do evento (R$)</label>
+            <input type="number" id="ev-receita" placeholder="0,00" min="0" step="0.01" />
+          </div>
+        </div>
+        <div class="field" style="margin-top:10px">
+          <label>Observações</label>
+          <textarea id="ev-obs" placeholder="Notas sobre o evento..."></textarea>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Itens e despesas</div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th style="width:37%">Item / Descrição</th>
+                <th style="width:18%">Categoria</th>
+                <th style="width:9%">Qtd</th>
+                <th style="width:17%">Valor unit.</th>
+                <th class="r" style="width:13%">Subtotal</th>
+                <th style="width:6%"></th>
+              </tr>
+            </thead>
+            <tbody id="items-body"></tbody>
+          </table>
+        </div>
+        <div class="mobile-items" id="mobile-items"></div>
+        <button class="add-row-btn" id="add-row-btn">
+          <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" width="14" height="14">
+            <line x1="8" y1="2" x2="8" y2="14"/><line x1="2" y1="8" x2="14" y2="8"/>
+          </svg>
+          Adicionar item
+        </button>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Resumo</div>
+        <div class="metrics-grid">
+          <div class="metric">
+            <div class="metric-label">Despesas</div>
+            <div class="metric-value" id="m-desp">R$ 0,00</div>
+          </div>
+          <div class="metric">
+            <div class="metric-label">Receita</div>
+            <div class="metric-value" id="m-rec">R$ 0,00</div>
+          </div>
+          <div class="metric" id="m-res-card">
+            <div class="metric-label">Resultado</div>
+            <div class="metric-value" id="m-lucro">R$ 0,00</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="card-title">Ações</div>
+        <div class="actions-row">
+          <button class="btn-primary" id="salvar-evento">Salvar evento</button>
+          <button class="btn-sec" id="limpar-form">Limpar</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- PÁGINA: HISTÓRICO -->
+    <div class="page" id="page-historico">
+      <div id="hist-lista"></div>
+    </div>
+
+    <!-- PÁGINA: NOTA -->
+    <div class="page" id="page-nota">
+      <div class="card">
+        <div class="card-title">Selecionar evento</div>
+        <div class="field">
+          <label>Evento</label>
+          <select id="nota-select"></select>
+        </div>
+      </div>
+      <div id="nota-output"></div>
+    </div>
+
+    <!-- PÁGINA: DASHBOARD -->
+    <div class="page" id="page-dashboard">
+      <div id="dash-content"></div>
+    </div>
+
+  </div>
+
+  <!-- BOTTOM NAV -->
+  <nav>
+    <button class="nav-btn active" data-page="novo">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="3" width="18" height="18" rx="3"/><line x1="12" y1="8" x2="12" y2="16"/><line x1="8" y1="12" x2="16" y2="12"/>
+      </svg>
+      Novo
+    </button>
+    <button class="nav-btn" data-page="historico">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/>
+        <rect x="9" y="3" width="6" height="4" rx="1"/><line x1="9" y1="12" x2="15" y2="12"/><line x1="9" y1="16" x2="13" y2="16"/>
+      </svg>
+      Histórico
+    </button>
+    <button class="nav-btn" data-page="nota">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <path d="M14 2H6a2 2 0 00-2 2v16a2 2 0 002 2h12a2 2 0 002-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        <line x1="16" y1="13" x2="8" y2="13"/><line x1="16" y1="17" x2="8" y2="17"/><polyline points="10 9 9 9 8 9"/>
+      </svg>
+      Nota
+    </button>
+    <button class="nav-btn" data-page="dashboard">
+      <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round">
+        <rect x="3" y="13" width="4" height="8" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="17" y="3" width="4" height="18" rx="1"/>
+      </svg>
+      Resumo
+    </button>
+  </nav>
+
+</div>
+
+<div id="toast"></div>
+
+<script src="script.js"></script>
+</body>
+</html>
