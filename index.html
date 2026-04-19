@@ -55,8 +55,9 @@
                 <th style="width:18%">Categoria</th>
                 <th style="width:9%">Qtd</th>
                 <th style="width:17%">Valor unit.</th>
-                <th class="r" style="width:13%">Subtotal</th>
-                <th style="width:6%"></th>
+               <th style="width:12%">Preço venda</th>
+               <th class="r" style="width:10%">Custo total</th>
+               <th class="r" style="width:10%">Faturamento</th> <th style="width:6%"></th>
               </tr>
             </thead>
             <tbody id="items-body"></tbody>
@@ -72,22 +73,22 @@
       </div>
 
       <div class="card">
-        <div class="card-title">Resumo</div>
-        <div class="metrics-grid">
-          <div class="metric">
-            <div class="metric-label">Despesas</div>
-            <div class="metric-value" id="m-desp">R$ 0,00</div>
-          </div>
-          <div class="metric">
-            <div class="metric-label">Receita</div>
-            <div class="metric-value" id="m-rec">R$ 0,00</div>
-          </div>
-          <div class="metric" id="m-res-card">
-            <div class="metric-label">Resultado</div>
-            <div class="metric-value" id="m-lucro">R$ 0,00</div>
-          </div>
-        </div>
-      </div>
+  <div class="card-title">Resumo Financeiro</div>
+  <div class="metrics-grid">
+    <div class="metric">
+      <div class="metric-label">Despesas (Custo)</div>
+      <div class="metric-value" id="m-desp">R$ 0,00</div>
+    </div>
+    <div class="metric">
+      <div class="metric-label">Faturamento Bruto</div>
+      <div class="metric-value" id="m-faturamento">R$ 0,00</div>
+    </div> 
+    <div class="metric" id="m-res-card">
+      <div class="metric-label">Resultado Final</div>
+      <div class="metric-value" id="m-lucro">R$ 0,00</div>
+    </div>
+  </div>
+</div>
 
       <div class="card">
         <div class="card-title">Ações</div>

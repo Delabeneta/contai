@@ -69,8 +69,15 @@ function goPage(name) {
 }
 
 // ==================== ITENS / TABELA ====================
-function addRow(desc = '', cat = 'Compra', qty = 1, val = '') {
-  rows.push({ id: rid++, desc, cat, qty: String(qty), val: String(val) });
+function addRow(desc = '', cat = 'Compra', qty = 1, precoCusto = '', precoVenda = '') {
+  rows.push({ 
+    id: rid++, 
+    desc, 
+    cat, 
+    qty: String(qty), 
+    precoCusto: String(precoCusto),
+    precoVenda: String(precoVenda)
+  });
   renderRows();
 }
 
@@ -91,41 +98,54 @@ function updateField(id, field, val) {
 function recalcSub(id) {
   const r = rows.find(r => r.id === id);
   if (!r) return;
-  const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
-  const el = document.getElementById('sub-' + id);
-  if (el) {
-    el.textContent = sub > 0 ? fmt(sub) : '—';
-    el.className = 'sub-cell' + (sub > 0 ? '' : ' sub-zero');
+  const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+  const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
+  
+  const elCusto = document.getElementById('custo-' + id);
+  if (elCusto) {
+    elCusto.textContent = custoTotal > 0 ? fmt(custoTotal) : '—';
+    elCusto.className = 'sub-cell' + (custoTotal > 0 ? '' : ' sub-zero');
+  }
+  
+  const elFat = document.getElementById('fat-' + id);
+  if (elFat) {
+    elFat.textContent = faturamentoTotal > 0 ? fmt(faturamentoTotal) : '—';
+    elFat.className = 'sub-cell' + (faturamentoTotal > 0 ? '' : ' sub-zero');
   }
 }
 
 function mobileRecalc(id, card) {
   const r = rows.find(r => r.id === id);
   if (!r) return;
-  const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
-  const el = card.querySelector(`#msub-${id}`);
+  const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+  
+  const el = card.querySelector(`#mcusto-${id}`);
   if (el) {
-    el.textContent = sub > 0 ? fmt(sub) : '—';
-    el.className = 'mi-sub' + (sub > 0 ? '' : ' zero');
+    el.textContent = custoTotal > 0 ? fmt(custoTotal) : '—';
+    el.className = 'mi-sub' + (custoTotal > 0 ? '' : ' zero');
   }
   recalcSub(id);
 }
 
 function calcDesp() {
-  return rows.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0), 0);
+  return rows.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
+}
+
+function calcFaturamento() {
+  return rows.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
 }
 
 function updateTotals() {
-  const desp = calcDesp();
-  const rec = parseFloat(document.getElementById('ev-receita').value) || 0;
-  const lucro = rec - desp;
+  const custoTotal = calcDesp();
+  const faturamento = calcFaturamento();
+  const resultado = faturamento - custoTotal;
   
-  document.getElementById('m-desp').textContent = fmt(desp);
-  document.getElementById('m-rec').textContent = fmt(rec);
-  document.getElementById('m-lucro').textContent = fmt(lucro);
+  document.getElementById('m-desp').textContent = fmt(custoTotal);
+  document.getElementById('m-faturamento').textContent = fmt(faturamento);
+  document.getElementById('m-lucro').textContent = fmt(resultado);
   
   const el = document.getElementById('m-res-card');
-  el.className = 'metric' + (lucro > 0 ? ' pos' : lucro < 0 ? ' neg' : '');
+  el.className = 'metric' + (resultado > 0 ? ' pos' : resultado < 0 ? ' neg' : '');
 }
 
 function renderRows() {
@@ -138,7 +158,8 @@ function renderRows() {
   mobileEl.innerHTML = '';
 
   rows.forEach(r => {
-    const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
+    const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+    const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
     const catOpts = CATS.map(c => `<option${c === r.cat ? ' selected' : ''}>${c}</option>`).join('');
 
     // Desktop row
@@ -149,9 +170,12 @@ function renderRows() {
       <td><select class="td-select" onchange="updateField(${r.id},'cat',this.value)">${catOpts}</select></td>
       <td><input class="td-input" type="number" value="${r.qty}" min="1" step="1" style="text-align:center"
         oninput="updateField(${r.id},'qty',this.value)" /></td>
-      <td><input class="td-input" type="number" value="${r.val}" min="0" step="0.01" placeholder="0.00"
-        oninput="updateField(${r.id},'val',this.value)" /></td>
-      <td class="sub-cell${sub > 0 ? '' : ' sub-zero'}" id="sub-${r.id}">${sub > 0 ? fmt(sub) : '—'}</td>
+      <td><input class="td-input" type="number" value="${r.precoCusto}" min="0" step="0.01" placeholder="Preço custo"
+        oninput="updateField(${r.id},'precoCusto',this.value)" /></td>
+      <td><input class="td-input" type="number" value="${r.precoVenda}" min="0" step="0.01" placeholder="Preço venda"
+        oninput="updateField(${r.id},'precoVenda',this.value)" /></td>
+      <td class="sub-cell${custoTotal > 0 ? '' : ' sub-zero'}" id="custo-${r.id}">${custoTotal > 0 ? fmt(custoTotal) : '—'}</td>
+      <td class="sub-cell${faturamentoTotal > 0 ? '' : ' sub-zero'}" id="fat-${r.id}">${faturamentoTotal > 0 ? fmt(faturamentoTotal) : '—'}</td>
       <td><button class="btn-del" onclick="removeRow(${r.id})">
         <svg viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" width="13" height="13">
           <line x1="3" y1="3" x2="13" y2="13"/><line x1="13" y1="3" x2="3" y2="13"/>
@@ -177,9 +201,11 @@ function renderRows() {
         <select onchange="updateField(${r.id},'cat',this.value)">${catOpts}</select>
         <input type="number" value="${r.qty}" min="1" step="1" placeholder="Qtd"
           oninput="updateField(${r.id},'qty',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
-        <input type="number" value="${r.val}" min="0" step="0.01" placeholder="R$ 0,00"
-          oninput="updateField(${r.id},'val',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
-        <div class="mi-sub${sub > 0 ? '' : ' zero'}" id="msub-${r.id}">${sub > 0 ? fmt(sub) : '—'}</div>
+        <input type="number" value="${r.precoCusto}" min="0" step="0.01" placeholder="Custo"
+          oninput="updateField(${r.id},'precoCusto',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
+        <input type="number" value="${r.precoVenda}" min="0" step="0.01" placeholder="Venda"
+          oninput="updateField(${r.id},'precoVenda',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
+        <div class="mi-sub${custoTotal > 0 ? '' : ' zero'}" id="mcusto-${r.id}">${custoTotal > 0 ? fmt(custoTotal) : '—'}</div>
       </div>`;
     mobileEl.appendChild(div);
   });
@@ -200,9 +226,15 @@ function salvarEvento() {
     nome,
     data: document.getElementById('ev-data').value,
     resp: document.getElementById('ev-resp').value.trim(),
-    receita: parseFloat(document.getElementById('ev-receita').value) || 0,
     obs: document.getElementById('ev-obs').value.trim(),
-    items: rows.map(r => ({ ...r })),
+    items: rows.map(r => ({ 
+      id: r.id,
+      desc: r.desc,
+      cat: r.cat,
+      qty: r.qty,
+      precoCusto: r.precoCusto,
+      precoVenda: r.precoVenda
+    })),
     savedAt: new Date().toISOString()
   };
   
@@ -226,7 +258,6 @@ function limparFormulario() {
   document.getElementById('ev-resp').value = '';
   document.getElementById('ev-obs').value = '';
   document.getElementById('ev-data').value = hoje();
-  document.getElementById('ev-receita').value = '';
   
   rows = [];
   rid = 0;
@@ -247,20 +278,24 @@ function editarEvento(id) {
   document.getElementById('ev-nome').value = ev.nome;
   document.getElementById('ev-data').value = ev.data || hoje();
   document.getElementById('ev-resp').value = ev.resp || '';
-  document.getElementById('ev-receita').value = ev.receita || '';
   document.getElementById('ev-obs').value = ev.obs || '';
   
   rows = [];
   rid = 0;
   (ev.items || []).forEach(r => {
-    rows.push({ ...r, id: rid++ });
+    rows.push({ 
+      id: rid++,
+      desc: r.desc || '',
+      cat: r.cat || 'Compra',
+      qty: r.qty || '1',
+      precoCusto: r.precoCusto || '',
+      precoVenda: r.precoVenda || ''
+    });
   });
   if (rows.length === 0) {
     addRow();
     addRow();
     addRow();
-  } else {
-    renderRows();
   }
   renderRows();
   
@@ -294,8 +329,9 @@ function renderHistorico() {
   }
   
   el.innerHTML = evs.map(ev => {
-    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0), 0);
-    const lucro = (ev.receita || 0) - desp;
+    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
+    const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
+    const lucro = fat - desp;
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
     const nitens = (ev.items || []).filter(r => r.desc).length;
@@ -364,8 +400,9 @@ function renderNota() {
 
 function gerarTextoNota(ev) {
   const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
-  const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0), 0);
-  const lucro = (ev.receita || 0) - desp;
+  const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
+  const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
+  const lucro = fat - desp;
   const SEP = '─'.repeat(60);
   const SEP2 = '═'.repeat(60);
   
@@ -381,16 +418,16 @@ function gerarTextoNota(ev) {
     if (!items.length) return;
     linhas += `\n  ${cat.toUpperCase()}\n`;
     items.forEach(r => {
-      const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
+      const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
       const desc = (r.desc || '').slice(0, 26).padEnd(26);
       const qtyStr = parseInt(r.qty) > 1 ? `${r.qty}x` : '  ';
-      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.val) || 0).padStart(12)}   ${fmt(sub).padStart(12)}\n`;
+      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.precoCusto) || 0).padStart(12)}   ${fmt(sub).padStart(12)}\n`;
     });
   });
   
   let nota = `${SEP2}\n  MESA & CONTA — NOTA DESCRITIVA\n${SEP2}\n\n  Evento:       ${ev.nome}\n  Data:         ${dataFmt}\n  Responsável:  ${ev.resp || '—'}\n`;
   if (ev.obs) nota += `  Obs:          ${ev.obs}\n`;
-  nota += `\n${SEP}\n  ITEM                        QTD   VALOR UNIT.       SUBTOTAL\n${SEP}\n${linhas}\n${SEP}\n  Total de despesas:                          ${fmt(desp).padStart(12)}\n  Receita do evento:                          ${fmt(ev.receita || 0).padStart(12)}\n${SEP2}\n  RESULTADO:                                  ${fmt(lucro).padStart(12)}\n${SEP2}\n\n  Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  nota += `\n${SEP}\n  ITEM                        QTD   PREÇO CUSTO       CUSTO TOTAL\n${SEP}\n${linhas}\n${SEP}\n  Total de despesas (custo):                     ${fmt(desp).padStart(12)}\n  Faturamento bruto:                             ${fmt(fat).padStart(12)}\n${SEP2}\n  RESULTADO:                                     ${fmt(lucro).padStart(12)}\n${SEP2}\n\n  Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   return nota;
 }
 
@@ -407,6 +444,8 @@ function copiarNota() {
   });
 }
 
+
+// ==================== PDF ====================
 function baixarPDF() {
   const id = document.getElementById('nota-select').value;
   if (!id) {
@@ -430,76 +469,92 @@ function baixarPDF() {
       }
       
       const { jsPDF } = window.jspdf;
-      const doc = new jsPDF({ unit: 'mm', format: 'a4' });
-      const W = doc.internal.pageSize.getWidth();
-      const mx = 18;
-      let y = 40;
+      // A4 retrato: 210 x 297mm
+      const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
+      const W = doc.internal.pageSize.getWidth(); // 210
+      const H = doc.internal.pageSize.getHeight(); // 297
+      const mx = 12;
+      let y = 30;
       
       const cor = (r, g, b) => doc.setTextColor(r, g, b);
       const bold = () => doc.setFont('helvetica', 'bold');
       const normal = () => doc.setFont('helvetica', 'normal');
       
-      const checkPage = (need = 8) => {
-        if (y + need > 270) {
+      const checkPage = (need = 6) => {
+        if (y + need > H - 14) {
           doc.addPage();
-          y = 20;
+          y = 16;
         }
       };
       
       // Cabeçalho
       doc.setFillColor(242, 238, 230);
-      doc.rect(0, 0, W, 30, 'F');
+      doc.rect(0, 0, W, 18, 'F');
       doc.setDrawColor(210, 203, 190);
-      doc.setLineWidth(0.4);
-      doc.line(0, 30, W, 30);
+      doc.setLineWidth(0.3);
+      doc.line(0, 18, W, 18);
       bold();
-      doc.setFontSize(17);
+      doc.setFontSize(13);
       cor(26, 23, 20);
-      doc.text('Contai', mx, 15);
+      doc.text('Contai', mx, 10);
       normal();
-      doc.setFontSize(8);
+      doc.setFontSize(6.5);
       cor(107, 101, 96);
-      doc.text('NOTA DESCRITIVA DE EVENTO', mx, 22);
+      doc.text('NOTA DESCRITIVA DE EVENTO', mx, 15);
       
       // Dados do evento
-      const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
+      const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
       bold();
-      doc.setFontSize(12);
+      doc.setFontSize(10);
       cor(26, 23, 20);
       doc.text(ev.nome || 'Sem nome', mx, y);
-      y += 7;
-      normal();
-      doc.setFontSize(9);
-      cor(107, 101, 96);
-      doc.text(dataFmt, mx, y);
       y += 5;
-      if (ev.resp) {
-        doc.text('Responsável: ' + ev.resp, mx, y);
-        y += 5;
-      }
+      normal();
+      doc.setFontSize(7.5);
+      cor(107, 101, 96);
+      // Info numa linha só se couber
+      let infoLine = dataFmt;
+      if (ev.resp) infoLine += '   Resp: ' + ev.resp;
+      doc.text(infoLine, mx, y);
+      y += 4;
       if (ev.obs) {
-        doc.text('Obs: ' + ev.obs, mx, y);
-        y += 5;
+        doc.text('Obs: ' + ev.obs.substring(0, 60), mx, y);
+        y += 4;
       }
-      y += 3;
+      y += 1;
       
       // Separador
       doc.setDrawColor(210, 205, 198);
-      doc.setLineWidth(0.3);
+      doc.setLineWidth(0.2);
       doc.line(mx, y, W - mx, y);
-      y += 6;
+      y += 3;
+      
+      // Colunas ajustadas para A4 retrato (186mm úteis)
+      // col1: ITEM (começa em mx=12, vai até col2)
+      // larguras: Item=70, Qtd=12, Custo=28, Venda=28, CustoTot=28, Fat=rest
+      const col1 = mx;          // ITEM: 12
+      const col2 = mx + 70;     // QTD: 82
+      const col3 = mx + 84;     // CUSTO UNIT: 96
+      const col4 = mx + 112;    // VENDA UNIT: 124
+      const col5 = mx + 140;    // CUSTO TOT: 152
+      const col6 = W - mx;      // FATURAMENTO (direita): 198
+
+      // Largura máxima para a descrição quebrar linha
+      const maxDescWidth = col2 - col1 - 3;
       
       // Cabeçalho da tabela
       doc.setFillColor(240, 237, 231);
-      doc.rect(mx, y - 4, W - mx * 2, 9, 'F');
+      doc.rect(mx, y - 2.5, W - mx * 2, 6, 'F');
       bold();
-      doc.setFontSize(8);
-      cor(107, 101, 96);
-      doc.text('ITEM / DESCRIÇÃO', mx + 2, y + 1);
-      doc.text('QTD', W - mx - 52, y + 1, { align: 'right' });
-      doc.text('UNIT.', W - mx - 28, y + 1, { align: 'right' });
-      doc.text('SUBTOTAL', W - mx - 2, y + 1, { align: 'right' });
-      y += 10;
+      doc.setFontSize(6);
+      cor(80, 75, 70);
+      doc.text('ITEM', col1 + 1, y);
+      doc.text('QTD', col2 + 6, y, { align: 'center' });
+      doc.text('CUSTO UNIT', col3 + 14, y, { align: 'center' });
+      doc.text('VENDA UNIT', col4 + 14, y, { align: 'center' });
+      doc.text('CUSTO TOT', col5 + 11, y, { align: 'center' });
+      doc.text('FATURAMENTO', col6, y, { align: 'right' });
+      y += 4.5;
       
       // Itens por categoria
       const grupos = {};
@@ -508,101 +563,123 @@ function baixarPDF() {
         if (grupos[r.cat]) grupos[r.cat].push(r);
       });
       
-      let totalDesp = 0;
+      let totalCusto = 0;
+      let totalFaturamento = 0;
       let alt = false;
-      const ROW_H = 7.5;
+      const LINE_H = 4.0;  // altura de cada linha de texto
+      const ROW_PAD = 1.5; // padding vertical por célula
       
       CATS.forEach(cat => {
         const items = grupos[cat];
         if (!items.length) return;
-        checkPage(10);
+        checkPage(7);
         
         // Categoria header
         doc.setFillColor(248, 245, 240);
-        doc.rect(mx, y - 4, W - mx * 2, 7, 'F');
+        doc.rect(mx, y - 2.5, W - mx * 2, 4.5, 'F');
         bold();
-        doc.setFontSize(8);
-        cor(107, 101, 96);
+        doc.setFontSize(5.5);
+        cor(100, 95, 90);
         doc.text(cat.toUpperCase(), mx + 2, y);
-        y += 8;
+        y += 4;
         
         items.forEach(r => {
-          checkPage(ROW_H + 3);
-          const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
-          totalDesp += sub;
-          
+          const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+          const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
+          totalCusto += custoTotal;
+          totalFaturamento += faturamentoTotal;
+
+          // Quebra de linha do nome
+          doc.setFontSize(7);
+          normal();
+          const descLines = doc.splitTextToSize(r.desc || '', maxDescWidth);
+          const rowHeight = descLines.length * LINE_H + ROW_PAD * 2;
+
+          checkPage(rowHeight + 2);
+
           if (alt) {
             doc.setFillColor(247, 244, 239);
-            doc.rect(mx, y - ROW_H + 2, W - mx * 2, ROW_H, 'F');
+            doc.rect(mx, y - ROW_PAD, W - mx * 2, rowHeight, 'F');
           }
           alt = !alt;
           
+          // Centro vertical para valores numéricos
+          const midY = y + (descLines.length - 1) * LINE_H / 2;
+
+          // Descrição (com quebra de linha)
           normal();
-          doc.setFontSize(9.5);
+          doc.setFontSize(7);
           cor(26, 23, 20);
-          const descTxt = doc.splitTextToSize(r.desc || '', W - mx * 2 - 60)[0];
-          doc.text(descTxt, mx + 4, y);
+          descLines.forEach((line, i) => {
+            doc.text(line, col1 + 1, y + i * LINE_H);
+          });
           
-          cor(107, 101, 96);
-          doc.setFontSize(9);
-          doc.text(String(parseInt(r.qty) || 1), W - mx - 52, y, { align: 'right' });
-          doc.text(fmtNum(parseFloat(r.val) || 0), W - mx - 28, y, { align: 'right' });
+          // Valores numéricos
+          cor(90, 85, 80);
+          doc.setFontSize(6.5);
+          doc.text(String(parseInt(r.qty) || 1), col2 + 6, midY, { align: 'center' });
+          doc.text(fmtNum(parseFloat(r.precoCusto) || 0), col3 + 14, midY, { align: 'center' });
+          doc.text(fmtNum(parseFloat(r.precoVenda) || 0), col4 + 14, midY, { align: 'center' });
           
           bold();
           cor(26, 23, 20);
-          doc.setFontSize(9.5);
-          doc.text(fmtNum(sub), W - mx - 2, y, { align: 'right' });
-          y += ROW_H;
+          doc.setFontSize(7);
+          doc.text(fmtNum(custoTotal), col5 + 11, midY, { align: 'center' });
+          doc.text(fmtNum(faturamentoTotal), col6, midY, { align: 'right' });
+
+          y += rowHeight;
         });
-        y += 2;
+        y += 0.5;
       });
       
-      y += 3;
-      doc.setDrawColor(180, 175, 168);
-      doc.line(mx, y, W - mx, y);
-      y += 6;
-      
-      // Subtotais
-      const receita = ev.receita || 0;
-      const resultado = receita - totalDesp;
-      
-      const totRow = (label, val) => {
-        checkPage(7);
-        normal();
-        doc.setFontSize(9);
-        cor(107, 101, 96);
-        doc.text(label, mx + 2, y);
-        normal();
-        cor(26, 23, 20);
-        doc.text(fmtNum(val), W - mx - 2, y, { align: 'right' });
-        y += 6;
-      };
-      
-      totRow('Total de despesas', totalDesp);
-      totRow('Receita do evento', receita);
       y += 2;
       doc.setDrawColor(180, 175, 168);
       doc.line(mx, y, W - mx, y);
+      y += 4;
+      
+      // Totais — label à esquerda do col5, valor alinhado à direita em col6
+      const labelX = col5 - 2;
+
+      normal();
+      doc.setFontSize(7.5);
+      cor(107, 101, 96);
+      doc.text('Total de despesas:', labelX, y, { align: 'right' });
+      bold();
+      cor(26, 23, 20);
+      doc.text(fmtNum(totalCusto), col6, y, { align: 'right' });
       y += 5;
       
-      // Resultado
-      checkPage(14);
+      normal();
+      doc.setFontSize(7.5);
+      cor(107, 101, 96);
+      doc.text('Faturamento bruto:', labelX, y, { align: 'right' });
+      bold();
+      cor(26, 23, 20);
+      doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
+      y += 4;
+      
+      doc.setDrawColor(180, 175, 168);
+      doc.line(mx, y, W - mx, y);
+      y += 4;
+      
+      // Resultado destacado
+      const resultado = totalFaturamento - totalCusto;
       const resCor = resultado >= 0 ? [58, 107, 28] : [139, 32, 32];
       const resBg = resultado >= 0 ? [237, 243, 232] : [253, 240, 240];
       doc.setFillColor(...resBg);
-      doc.rect(mx, y - 1, W - mx * 2, 12, 'F');
+      doc.rect(mx, y - 2, W - mx * 2, 8, 'F');
       bold();
-      doc.setFontSize(11);
+      doc.setFontSize(9);
       cor(...resCor);
-      doc.text('RESULTADO', mx + 4, y + 7);
-      doc.text(fmtNum(resultado), W - mx - 4, y + 7, { align: 'right' });
-      y += 18;
+      doc.text('RESULTADO:', labelX, y + 3, { align: 'right' });
+      doc.text(fmtNum(resultado), col6, y + 3, { align: 'right' });
+      y += 11;
       
       // Rodapé
       normal();
-      doc.setFontSize(8);
+      doc.setFontSize(6);
       cor(160, 153, 144);
-      const agora = new Date().toLocaleDateString('pt-BR') + ' às ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
+      const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
       doc.text('Gerado em ' + agora + ' - Contai', mx, y);
       
       const nomeLimpo = (ev.nome || 'evento').replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '_').slice(0, 40);
@@ -648,17 +725,19 @@ function renderDashboard() {
   }
   
   const totalDesp = evs.reduce((s, ev) => {
-    return s + (ev.items || []).reduce((ss, r) => ss + (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0), 0);
+    return s + (ev.items || []).reduce((ss, r) => ss + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
   }, 0);
-  const totalRec = evs.reduce((s, ev) => s + (ev.receita || 0), 0);
-  const totalLucro = totalRec - totalDesp;
+  const totalFat = evs.reduce((s, ev) => {
+    return s + (ev.items || []).reduce((ss, r) => ss + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
+  }, 0);
+  const totalLucro = totalFat - totalDesp;
   const lucroClass = totalLucro >= 0 ? 'pos' : 'neg';
   
   // Por categoria
   const catTotals = {};
   CATS.forEach(c => catTotals[c] = 0);
   evs.forEach(ev => (ev.items || []).forEach(r => {
-    const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0);
+    const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
     if (catTotals[r.cat] !== undefined) catTotals[r.cat] += sub;
   }));
   const maxCat = Math.max(...Object.values(catTotals), 1);
@@ -672,8 +751,9 @@ function renderDashboard() {
   }).join('');
   
   const recentes = evs.slice(0, 5).map(ev => {
-    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.val) || 0), 0);
-    const lucro = (ev.receita || 0) - desp;
+    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
+    const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
+    const lucro = fat - desp;
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
       <div>
@@ -689,12 +769,12 @@ function renderDashboard() {
       <div class="card-title">Visão geral — ${evs.length} evento${evs.length > 1 ? 's' : ''}</div>
       <div class="dash-metrics">
         <div class="dash-metric">
-          <div class="metric-label">Total de receitas</div>
-          <div class="metric-value">${fmt(totalRec)}</div>
-        </div>
-        <div class="dash-metric">
           <div class="metric-label">Total de despesas</div>
           <div class="metric-value">${fmt(totalDesp)}</div>
+        </div>
+        <div class="dash-metric">
+          <div class="metric-label">Faturamento total</div>
+          <div class="metric-value">${fmt(totalFat)}</div>
         </div>
         <div class="dash-metric dash-big ${lucroClass}">
           <div class="metric-label">Resultado geral</div>
@@ -714,7 +794,6 @@ function renderDashboard() {
 
 // ==================== EVENT LISTENERS ====================
 function initEventListeners() {
-  // Navegação
   document.querySelectorAll('.nav-btn').forEach(btn => {
     btn.addEventListener('click', () => {
       const page = btn.getAttribute('data-page');
@@ -722,23 +801,15 @@ function initEventListeners() {
     });
   });
   
-  // Salvar evento
   const salvarBtn = document.getElementById('salvar-evento');
   if (salvarBtn) salvarBtn.addEventListener('click', salvarEvento);
   
-  // Limpar formulário
   const limparBtn = document.getElementById('limpar-form');
   if (limparBtn) limparBtn.addEventListener('click', limparFormulario);
   
-  // Adicionar item
   const addBtn = document.getElementById('add-row-btn');
   if (addBtn) addBtn.addEventListener('click', () => addRow());
   
-  // Atualizar totais ao mudar receita
-  const receitaInput = document.getElementById('ev-receita');
-  if (receitaInput) receitaInput.addEventListener('input', updateTotals);
-  
-  // Nota select
   const notaSelect = document.getElementById('nota-select');
   if (notaSelect) notaSelect.addEventListener('change', renderNota);
 }
@@ -753,7 +824,6 @@ function init() {
   renderDashboard();
 }
 
-// Iniciar quando o DOM estiver pronto
 if (document.readyState === 'loading') {
   document.addEventListener('DOMContentLoaded', init);
 } else {

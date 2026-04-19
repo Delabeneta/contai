@@ -420,7 +420,7 @@ tbody tr:last-child td {
   
   .mi-bottom {
     display: grid;
-    grid-template-columns: 1fr 60px 80px auto;
+    grid-template-columns: 1fr 50px 70px 70px 60px;
     gap: 6px;
     align-items: center;
   }
@@ -490,6 +490,7 @@ tbody tr:last-child td {
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
+
 
 @media (max-width: 420px) {
   .metrics-grid {
