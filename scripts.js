@@ -2,11 +2,11 @@
 const CATS = ['Compra', 'Doação', 'Taxa', 'Outro'];
 const CAT_CLASS = { 'Compra': 'b-compra', 'Doação': 'b-doacao', 'Taxa': 'b-taxa', 'Outro': 'b-outro' };
 const BAR_CLASS = { 'Compra': 'bar-compra', 'Doação': 'bar-doacao', 'Taxa': 'bar-taxa', 'Outro': 'bar-outro' };
-const PAGE_TITLES = { 
-  novo: 'Novo evento', 
-  historico: 'Histórico', 
-  nota: 'Nota descritiva', 
-  dashboard: 'Resumo geral' 
+const PAGE_TITLES = {
+  novo: 'Novo evento',
+  historico: 'Histórico',
+  nota: 'Nota Fiscal Descritiva',
+  dashboard: 'Resumo geral'
 };
 
 // ESTADO GLOBAL
@@ -27,7 +27,17 @@ function saveEvents(evs) {
   localStorage.setItem('contai_events', JSON.stringify(evs));
 }
 
+function getProximoNumeroNota() {
+  let num = parseInt(localStorage.getItem('contai_ultimo_numero_nota') || '1000');
+  localStorage.setItem('contai_ultimo_numero_nota', num + 1);
+  return num;
+}
+
 // ==================== UTILIDADES ====================
+function hoje() {
+  return new Date().toISOString().split('T')[0];
+}
+
 function fmt(v) {
   return 'R$ ' + Number(v).toLocaleString('pt-BR', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
 }
@@ -36,8 +46,13 @@ function fmtNum(v) {
   return fmt(v);
 }
 
-function hoje() {
-  return new Date().toISOString().split('T')[0];
+function fmtData(data) {
+  if (!data) return '—';
+  return new Date(data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' });
+}
+
+function fmtDataHora() {
+  return new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
 }
 
 function esc(s) {
@@ -55,14 +70,14 @@ function toast(msg) {
 function goPage(name) {
   document.querySelectorAll('.page').forEach(p => p.classList.remove('active'));
   document.querySelectorAll('.nav-btn').forEach(b => b.classList.remove('active'));
-  
+
   document.getElementById('page-' + name).classList.add('active');
   const navBtn = document.querySelector(`.nav-btn[data-page="${name}"]`);
   if (navBtn) navBtn.classList.add('active');
-  
+
   document.getElementById('page-title').textContent = PAGE_TITLES[name];
   document.getElementById('content').scrollTop = 0;
-  
+
   if (name === 'historico') renderHistorico();
   if (name === 'nota') renderNotaPage();
   if (name === 'dashboard') renderDashboard();
@@ -70,11 +85,11 @@ function goPage(name) {
 
 // ==================== ITENS / TABELA ====================
 function addRow(desc = '', cat = 'Compra', qty = 1, precoCusto = '', precoVenda = '') {
-  rows.push({ 
-    id: rid++, 
-    desc, 
-    cat, 
-    qty: String(qty), 
+  rows.push({
+    id: rid++,
+    desc,
+    cat,
+    qty: String(qty),
     precoCusto: String(precoCusto),
     precoVenda: String(precoVenda)
   });
@@ -100,13 +115,13 @@ function recalcSub(id) {
   if (!r) return;
   const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
   const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
-  
+
   const elCusto = document.getElementById('custo-' + id);
   if (elCusto) {
     elCusto.textContent = custoTotal > 0 ? fmt(custoTotal) : '—';
     elCusto.className = 'sub-cell' + (custoTotal > 0 ? '' : ' sub-zero');
   }
-  
+
   const elFat = document.getElementById('fat-' + id);
   if (elFat) {
     elFat.textContent = faturamentoTotal > 0 ? fmt(faturamentoTotal) : '—';
@@ -163,14 +178,13 @@ function updateTotals() {
 
   document.getElementById('m-desp').textContent = fmt(custoTotal);
 
-  // Label e valor do meio mudam conforme o modo
   const labelFat = document.getElementById('m-fat-label');
   const valFat   = document.getElementById('m-faturamento');
   if (labelFat) labelFat.textContent = usaReceita ? 'Receita geral' : 'Faturamento';
   if (valFat)   valFat.textContent   = fmt(receita);
 
   document.getElementById('m-lucro').textContent = fmt(resultado);
-  
+
   const el = document.getElementById('m-res-card');
   el.className = 'metric' + (resultado > 0 ? ' pos' : resultado < 0 ? ' neg' : '');
 }
@@ -178,9 +192,9 @@ function updateTotals() {
 function renderRows() {
   const tbody = document.getElementById('items-body');
   const mobileEl = document.getElementById('mobile-items');
-  
+
   if (!tbody || !mobileEl) return;
-  
+
   tbody.innerHTML = '';
   mobileEl.innerHTML = '';
 
@@ -209,7 +223,7 @@ function renderRows() {
         </svg></button></td>`;
     tbody.appendChild(tr);
 
-    // Mobile card 
+    // Mobile card
     const div = document.createElement('div');
     div.className = 'mobile-item';
     div.innerHTML = `
@@ -255,7 +269,7 @@ function salvarEvento() {
     toast('Informe o nome do evento');
     return;
   }
-  
+
   const evs = loadEvents();
   const ev = {
     id: editingId || Date.now().toString(),
@@ -264,7 +278,7 @@ function salvarEvento() {
     resp: document.getElementById('ev-resp').value.trim(),
     receita: parseFloat(document.getElementById('ev-receita').value) || 0,
     obs: document.getElementById('ev-obs').value.trim(),
-    items: rows.map(r => ({ 
+    items: rows.map(r => ({
       id: r.id,
       desc: r.desc,
       cat: r.cat,
@@ -272,19 +286,25 @@ function salvarEvento() {
       precoCusto: r.precoCusto,
       precoVenda: r.precoVenda
     })),
-    savedAt: new Date().toISOString()
+    savedAt: new Date().toISOString(),
   };
-  
+
   if (editingId) {
     const idx = evs.findIndex(e => e.id === editingId);
-    if (idx >= 0) evs[idx] = ev;
-    else evs.push(ev);
+    if (idx >= 0) {
+      ev.numeroNota = evs[idx].numeroNota;
+      evs[idx] = ev;
+    } else {
+      ev.numeroNota = getProximoNumeroNota();
+      evs.push(ev);
+    }
     toast('Evento atualizado!');
   } else {
+    ev.numeroNota = getProximoNumeroNota();
     evs.unshift(ev);
     toast('Evento salvo!');
   }
-  
+
   saveEvents(evs);
   editingId = null;
   limparFormulario();
@@ -296,14 +316,14 @@ function limparFormulario() {
   document.getElementById('ev-obs').value = '';
   document.getElementById('ev-data').value = hoje();
   document.getElementById('ev-receita').value = '';
-  
+
   rows = [];
   rid = 0;
   renderRows();
   addRow();
   addRow();
   addRow();
-  
+
   editingId = null;
   document.getElementById('page-title').textContent = 'Novo evento';
 }
@@ -311,18 +331,18 @@ function limparFormulario() {
 function editarEvento(id) {
   const ev = loadEvents().find(e => e.id === id);
   if (!ev) return;
-  
+
   editingId = id;
   document.getElementById('ev-nome').value = ev.nome;
   document.getElementById('ev-data').value = ev.data || hoje();
   document.getElementById('ev-resp').value = ev.resp || '';
   document.getElementById('ev-obs').value = ev.obs || '';
   document.getElementById('ev-receita').value = ev.receita || '';
-  
+
   rows = [];
   rid = 0;
   (ev.items || []).forEach(r => {
-    rows.push({ 
+    rows.push({
       id: rid++,
       desc: r.desc || '',
       cat: r.cat || 'Compra',
@@ -332,12 +352,10 @@ function editarEvento(id) {
     });
   });
   if (rows.length === 0) {
-    addRow();
-    addRow();
-    addRow();
+    addRow(); addRow(); addRow();
   }
   renderRows();
-  
+
   goPage('novo');
   document.getElementById('page-title').textContent = 'Editando evento';
   document.getElementById('content').scrollTop = 0;
@@ -355,7 +373,7 @@ function deletarEvento(id) {
 function renderHistorico() {
   const evs = loadEvents();
   const el = document.getElementById('hist-lista');
-  
+
   if (!evs.length) {
     el.innerHTML = `<div class="empty-state">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round">
@@ -366,17 +384,17 @@ function renderHistorico() {
     </div>`;
     return;
   }
-  
+
   el.innerHTML = evs.map(ev => {
     const { resultado: lucro } = calcResultadoEvento(ev);
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
     const nitens = (ev.items || []).filter(r => r.desc).length;
-    
+
     return `<div class="ev-card">
       <div class="ev-card-left">
         <div class="ev-card-nome">${esc(ev.nome)}</div>
-        <div class="ev-card-sub">${dataFmt} · ${nitens} ite${nitens === 1 ? 'm' : 'ns'}${ev.resp ? ' · ' + esc(ev.resp) : ''}</div>
+        <div class="ev-card-sub">NFS-e ${ev.numeroNota || '—'} · ${dataFmt} · ${nitens} ite${nitens === 1 ? 'm' : 'ns'}${ev.resp ? ' · ' + esc(ev.resp) : ''}</div>
         <div class="ev-card-actions">
           <button class="btn-sec" style="padding:5px 12px;font-size:12px" onclick="editarEvento('${ev.id}')">Editar</button>
           <button class="btn-sec" style="padding:5px 12px;font-size:12px" onclick="verNota('${ev.id}')">Ver nota</button>
@@ -399,7 +417,7 @@ function verNota(id) {
   const evs = loadEvents();
   const sel = document.getElementById('nota-select');
   sel.innerHTML = '<option value="">— Escolha um evento —</option>' +
-    evs.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
+    evs.map(e => `<option value="${e.id}">${esc(e.nome)} (NFS-e ${e.numeroNota || '—'})</option>`).join('');
   sel.value = id;
   goPage('nota');
   renderNota();
@@ -411,24 +429,24 @@ function renderNotaPage() {
   const sel = document.getElementById('nota-select');
   const cur = sel.value;
   sel.innerHTML = '<option value="">— Escolha um evento —</option>' +
-    evs.map(e => `<option value="${e.id}"${e.id === cur ? ' selected' : ''}>${esc(e.nome)}</option>`).join('');
+    evs.map(e => `<option value="${e.id}"${e.id === cur ? ' selected' : ''}>${esc(e.nome)} (NFS-e ${e.numeroNota || '—'})</option>`).join('');
   renderNota();
 }
 
 function renderNota() {
   const id = document.getElementById('nota-select').value;
   const out = document.getElementById('nota-output');
-  
+
   if (!id) {
-    out.innerHTML = `<div class="select-ev-msg">Selecione um evento acima para gerar a nota.</div>`;
+    out.innerHTML = `<div class="select-ev-msg">Selecione um evento acima para gerar a nota fiscal.</div>`;
     return;
   }
-  
+
   const ev = loadEvents().find(e => e.id === id);
   if (!ev) return;
-  
+
   out.innerHTML = `<div class="card">
-    <div class="card-title">Nota gerada</div>
+    <div class="card-title">Nota Fiscal Descritiva </div>
     <div class="nota-pre" id="nota-pre-text">${gerarTextoNota(ev)}</div>
     <div class="actions-row" style="margin-top:10px">
       <button class="btn-sec" onclick="copiarNota()">Copiar texto</button>
@@ -439,17 +457,17 @@ function renderNota() {
 }
 
 function gerarTextoNota(ev) {
-  const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
-  const { desp, fat, receitaGeral, usaReceita, receita, resultado } = calcResultadoEvento(ev);
-  const SEP = '─'.repeat(60);
-  const SEP2 = '═'.repeat(60);
-  
+  const dataFmt = fmtData(ev.data);
+  const { desp, fat, receitaGeral, usaReceita, resultado } = calcResultadoEvento(ev);
+  const SEP = '─'.repeat(70);
+  const SEP2 = '═'.repeat(70);
+
   const grupos = {};
   CATS.forEach(c => grupos[c] = []);
   (ev.items || []).filter(r => r.desc).forEach(r => {
     if (grupos[r.cat]) grupos[r.cat].push(r);
   });
-  
+
   let linhas = '';
   CATS.forEach(cat => {
     const items = grupos[cat];
@@ -457,20 +475,34 @@ function gerarTextoNota(ev) {
     linhas += `\n  ${cat.toUpperCase()}\n`;
     items.forEach(r => {
       const custoSub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
-      const desc = (r.desc || '').slice(0, 22).padEnd(22);
+      const fatSub   = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
+      const desc = (r.desc || '').slice(0, 28).padEnd(28);
       const qtyStr = parseInt(r.qty) > 1 ? `${r.qty}x` : '   ';
-      const vendaStr = parseFloat(r.precoVenda) > 0 ? fmt(parseFloat(r.precoVenda) || 0).padStart(12) : '            —';
-      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.precoCusto) || 0).padStart(12)}  ${vendaStr}  ${fmt(custoSub).padStart(12)}\n`;
+      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.precoCusto) || 0).padStart(12)}  ${fmt(parseFloat(r.precoVenda) || 0).padStart(12)}  ${fmt(custoSub).padStart(12)}  ${fmt(fatSub).padStart(12)}\n`;
     });
   });
 
-  const receitaLinha = usaReceita
-    ? `  Receita geral (informada):                             ${fmt(receitaGeral).padStart(12)}\n  Faturamento dos itens:                                  ${fmt(fat).padStart(12)}\n`
-    : `  Faturamento bruto (itens):                             ${fmt(fat).padStart(12)}\n`;
+  let totalSection = '';
+  totalSection += `  Total de despesas (custo):                    ${fmt(desp).padStart(12)}\n`;
+  if (usaReceita) {
+    totalSection += `  Faturamento dos itens (demonstrativo):        ${fmt(fat).padStart(12)}\n`;
+    totalSection += `  Receita geral (base de cálculo):              ${fmt(receitaGeral).padStart(12)}\n`;
+  } else {
+    totalSection += `  Faturamento bruto (itens):                    ${fmt(fat).padStart(12)}\n`;
+  }
 
-  let nota = `${SEP2}\n  CONTAI — NOTA DESCRITIVA\n${SEP2}\n\n  Evento:       ${ev.nome}\n  Data:         ${dataFmt}\n  Responsável:  ${ev.resp || '—'}\n`;
-  if (ev.obs) nota += `  Obs:          ${ev.obs}\n`;
-  nota += `\n${SEP}\n  ITEM                    QTD   CUSTO UNIT    VENDA UNIT    CUSTO TOTAL\n${SEP}\n${linhas}\n${SEP}\n  Total de despesas (custo):                              ${fmt(desp).padStart(12)}\n${receitaLinha}${SEP2}\n  RESULTADO:                                              ${fmt(resultado).padStart(12)}\n${SEP2}\n\n  Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  let nota = `${SEP2}\n                 NOTA FISCAL DESCRITIVA - NFS-e ${ev.numeroNota || '—'}\n${SEP2}\n\n`;
+  nota += `${SEP}\n  DADOS DO EVENTO\n${SEP}\n`;
+  nota += `  Evento:       ${ev.nome}\n  Data:         ${dataFmt}\n  Responsável:  ${ev.resp || '—'}\n`;
+  if (ev.obs) nota += `  Observações:  ${ev.obs}\n`;
+  nota += `\n${SEP}\n  ITEM                         QTD   CUSTO UNIT    VENDA UNIT    CUSTO TOT     FATURAMENTO\n${SEP}\n${linhas}\n${SEP}\n`;
+  nota += totalSection;
+  nota += `${SEP2}\n`;
+  nota += `  RESULTADO:                                     ${fmt(resultado).padStart(12)}\n${SEP2}\n\n`;
+  nota += `  Gerado em: ${fmtDataHora()}\n\n`;
+  nota += `  _____________________________________\n  (Assinatura do Coordenador)\n\n`;
+  nota += `  _____________________________________\n  (Assinatura do Responsável Geral)\n`;
+
   return nota;
 }
 
@@ -488,47 +520,43 @@ function copiarNota() {
 }
 
 // ==================== PDF ====================
+// ==================== PDF ====================
+// ==================== PDF ====================
 function baixarPDF() {
   const id = document.getElementById('nota-select').value;
   if (!id) {
     toast('Selecione um evento primeiro');
     return;
   }
-  
+
   const ev = loadEvents().find(e => e.id === id);
   if (!ev) return;
-  
+
   const btn = document.getElementById('btn-pdf');
   if (!btn) return;
-  
-  btn.textContent = 'Gerando...';
+
+  btn.textContent = 'Gerando PDF...';
   btn.disabled = true;
-  
+
   function gerar() {
     try {
-      if (!window.jspdf) {
-        throw new Error('Biblioteca não carregada');
-      }
-      
+      if (!window.jspdf) throw new Error('Biblioteca não carregada');
+
       const { jsPDF } = window.jspdf;
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
       const W = doc.internal.pageSize.getWidth();
-      const H = doc.internal.pageSize.getHeight();
-      const mx = 12;
-      let y = 30;
-      
+      const mx = 15;
+      let y = 25;
+
       const cor = (r, g, b) => doc.setTextColor(r, g, b);
       const bold = () => doc.setFont('helvetica', 'bold');
       const normal = () => doc.setFont('helvetica', 'normal');
-      
+
       const checkPage = (need = 6) => {
-        if (y + need > H - 14) {
-          doc.addPage();
-          y = 16;
-        }
+        if (y + need > 277) { doc.addPage(); y = 20; }
       };
-      
-      // Cabeçalho
+
+      // CABEÇALHO (estilo original - fundo claro)
       doc.setFillColor(242, 238, 230);
       doc.rect(0, 0, W, 18, 'F');
       doc.setDrawColor(210, 203, 190);
@@ -537,202 +565,210 @@ function baixarPDF() {
       bold();
       doc.setFontSize(13);
       cor(26, 23, 20);
-      doc.text('Contai', mx, 10);
+      doc.text('Contai', mx, 12);
       normal();
       doc.setFontSize(6.5);
       cor(107, 101, 96);
-      doc.text('NOTA DESCRITIVA DE EVENTO', mx, 15);
-      
-      // Dados do evento
-      const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
+      doc.text('NOTA FISCAL DESCRITIVA', mx, 17);
+
+      /* TÍTULO
+      y = 32;
       bold();
-      doc.setFontSize(10);
-      cor(26, 23, 20);
-      doc.text(ev.nome || 'Sem nome', mx, y);
+      doc.setFontSize(11);
+      cor(45, 80, 22);
+      doc.text(`NFS-e ${ev.numeroNota || '—'}`, mx, y);
+      y += 8; */
+
+      // DADOS DO EVENTO
+      bold();
+      doc.setFontSize(9);
+      cor(45, 80, 22);
+      doc.text('DADOS DO EVENTO', mx, y);
       y += 5;
       normal();
-      doc.setFontSize(7.5);
-      cor(107, 101, 96);
-      let infoLine = dataFmt;
-      if (ev.resp) infoLine += '   Resp: ' + ev.resp;
-      doc.text(infoLine, mx, y);
-      y += 4;
+      doc.setFontSize(8.5);
+      cor(26, 23, 20);
+      doc.text(`Evento:       ${ev.nome}`, mx, y); y += 4.5;
+      doc.text(`Data:         ${fmtData(ev.data)}`, mx, y); y += 4.5;
+      doc.text(`Responsável:  ${ev.resp || '—'}`, mx, y);
       if (ev.obs) {
-        doc.text('Obs: ' + ev.obs.substring(0, 60), mx, y);
-        y += 4;
+        y += 4.5;
+        const obsLines = doc.splitTextToSize(`Observações:  ${ev.obs}`, W - mx * 2);
+        doc.text(obsLines, mx, y);
+        y += obsLines.length * 4;
       }
-      y += 1;
-      
-      // Separador
-      doc.setDrawColor(210, 205, 198);
-      doc.setLineWidth(0.2);
-      doc.line(mx, y, W - mx, y);
-      y += 3;
-      
-      const col1 = mx;
-      const col2 = mx + 70;
-      const col3 = mx + 84;
-      const col4 = mx + 112;
-      const col5 = mx + 140;
-      const col6 = W - mx;
+      y += 8;
 
-      const maxDescWidth = col2 - col1 - 3;
-      
+      // TABELA DE ITENS
+      bold();
+      doc.setFontSize(9);
+      cor(45, 80, 22);
+      doc.text('ITENS E SERVIÇOS', mx, y);
+      y += 5;
+
       // Cabeçalho da tabela
+      const col = {
+        desc: mx,
+        qty:  mx + 62,
+        cu:   mx + 78,
+        vu:   mx + 104,
+        ct:   mx + 130,
+        fat:  W - mx
+      };
+
       doc.setFillColor(240, 237, 231);
       doc.rect(mx, y - 2.5, W - mx * 2, 6, 'F');
       bold();
-      doc.setFontSize(6);
+      doc.setFontSize(6.5);
       cor(80, 75, 70);
-      doc.text('ITEM', col1 + 1, y);
-      doc.text('QTD', col2 + 6, y, { align: 'center' });
-      doc.text('CUSTO UNIT', col3 + 14, y, { align: 'center' });
-      doc.text('VENDA UNIT', col4 + 14, y, { align: 'center' });
-      doc.text('CUSTO TOT', col5 + 11, y, { align: 'center' });
-      doc.text('FATURAMENTO', col6, y, { align: 'right' });
-      y += 4.5;
-      
-      // Itens por categoria
+      doc.text('DESCRIÇÃO',     col.desc, y);
+      doc.text('QTD',           col.qty + 5,  y, { align: 'center' });
+      doc.text('CUSTO UNIT',    col.cu + 10,  y, { align: 'center' });
+      doc.text('VENDA UNIT',    col.vu + 10,  y, { align: 'center' });
+      doc.text('CUSTO TOTAL',   col.ct + 6,   y, { align: 'center' });
+      doc.text('FATURAMENTO',   col.fat,      y, { align: 'right' });
+      y += 5.5;
+
+      const { desp: totalDesp, fat: totalFat, receitaGeral, usaReceita, resultado } = calcResultadoEvento(ev);
+
       const grupos = {};
       CATS.forEach(c => grupos[c] = []);
       (ev.items || []).filter(r => r.desc).forEach(r => {
         if (grupos[r.cat]) grupos[r.cat].push(r);
       });
-      
-      let totalCusto = 0;
-      let totalFaturamento = 0;
+
       let alt = false;
-      const LINE_H = 4.0;
-      const ROW_PAD = 1.5;
-      
+      const LINE_H = 4;
+
       CATS.forEach(cat => {
         const items = grupos[cat];
         if (!items.length) return;
-        checkPage(7);
-        
+
+        checkPage(8);
         doc.setFillColor(248, 245, 240);
-        doc.rect(mx, y - 2.5, W - mx * 2, 4.5, 'F');
-        bold();
-        doc.setFontSize(5.5);
+        doc.rect(mx, y - 2, W - mx * 2, 4.5, 'F');
+        doc.setFont('helvetica', 'italic');
+        doc.setFontSize(6);
         cor(100, 95, 90);
         doc.text(cat.toUpperCase(), mx + 2, y);
         y += 4;
-        
+
         items.forEach(r => {
-          const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
-          const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
-          totalCusto += custoTotal;
-          totalFaturamento += faturamentoTotal;
+          const custoSub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+          const fatSub   = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
 
-          doc.setFontSize(7);
           normal();
-          const descLines = doc.splitTextToSize(r.desc || '', maxDescWidth);
-          const rowHeight = descLines.length * LINE_H + ROW_PAD * 2;
+          doc.setFontSize(7);
+          const descLines = doc.splitTextToSize(r.desc || '', col.qty - col.desc - 3);
+          const rowH = descLines.length * LINE_H + 3;
 
-          checkPage(rowHeight + 2);
+          checkPage(rowH + 2);
 
           if (alt) {
             doc.setFillColor(247, 244, 239);
-            doc.rect(mx, y - ROW_PAD, W - mx * 2, rowHeight, 'F');
+            doc.rect(mx, y - 2, W - mx * 2, rowH, 'F');
           }
           alt = !alt;
-          
-          const midY = y + (descLines.length - 1) * LINE_H / 2;
 
-          normal();
-          doc.setFontSize(7);
+          const midY = y + (descLines.length - 1) * LINE_H / 2 + 1;
+
           cor(26, 23, 20);
-          descLines.forEach((line, i) => {
-            doc.text(line, col1 + 1, y + i * LINE_H);
-          });
-          
-          cor(90, 85, 80);
-          doc.setFontSize(6.5);
-          doc.text(String(parseInt(r.qty) || 1), col2 + 6, midY, { align: 'center' });
-          doc.text(fmtNum(parseFloat(r.precoCusto) || 0), col3 + 14, midY, { align: 'center' });
-          doc.text(fmtNum(parseFloat(r.precoVenda) || 0), col4 + 14, midY, { align: 'center' });
-          
+          descLines.forEach((line, i) => doc.text(line, col.desc + 1, y + i * LINE_H));
+
+          cor(80, 75, 70);
+          doc.text(String(parseInt(r.qty) || 1), col.qty + 5, midY, { align: 'center' });
+          doc.text(fmtNum(parseFloat(r.precoCusto) || 0), col.cu + 10, midY, { align: 'center' });
+          doc.text(fmtNum(parseFloat(r.precoVenda) || 0), col.vu + 10, midY, { align: 'center' });
+
           bold();
           cor(26, 23, 20);
-          doc.setFontSize(7);
-          doc.text(fmtNum(custoTotal), col5 + 11, midY, { align: 'center' });
-          doc.text(fmtNum(faturamentoTotal), col6, midY, { align: 'right' });
+          doc.text(fmtNum(custoSub), col.ct + 6, midY, { align: 'center' });
 
-          y += rowHeight;
+          if (usaReceita) {
+            cor(150, 145, 138);
+          }
+          doc.text(fmtNum(fatSub), col.fat, midY, { align: 'right' });
+          cor(26, 23, 20);
+
+          y += rowH;
         });
-        y += 0.5;
+        y += 2;
       });
-      
-      y += 2;
-      doc.setDrawColor(180, 175, 168);
-      doc.line(mx, y, W - mx, y);
-      y += 4;
-      
-      const labelX = col5 - 2;
-      const { receitaGeral, usaReceita, receita: receitaFinal, resultado } = calcResultadoEvento(ev);
+
+      y += 6;
+
+      // TOTAIS
+      const labelX = col.ct - 2;
 
       normal();
-      doc.setFontSize(7.5);
-      cor(107, 101, 96);
-      doc.text('Total de despesas:', labelX, y, { align: 'right' });
+      doc.setFontSize(8);
+      cor(80, 75, 70);
+      doc.text('Total de despesas (custo):', labelX, y, { align: 'right' });
       bold();
       cor(26, 23, 20);
-      doc.text(fmtNum(totalCusto), col6, y, { align: 'right' });
+      doc.text(fmtNum(totalDesp), col.fat, y, { align: 'right' });
       y += 5;
 
       if (usaReceita) {
         normal();
-        doc.setFontSize(7.5);
-        cor(107, 101, 96);
-        doc.text('Faturamento dos itens:', labelX, y, { align: 'right' });
-        bold();
-        cor(26, 23, 20);
-        doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
+        doc.setFontSize(8);
+        cor(130, 125, 120);
+        doc.text('Faturamento dos itens (demonstrativo):', labelX, y, { align: 'right' });
+        doc.setFont('helvetica', 'italic');
+        cor(130, 125, 120);
+        doc.text(fmtNum(totalFat), col.fat, y, { align: 'right' });
         y += 5;
 
         normal();
-        doc.setFontSize(7.5);
-        cor(107, 101, 96);
-        doc.text('Receita geral (informada):', labelX, y, { align: 'right' });
+        doc.setFontSize(8);
+        cor(80, 75, 70);
+        doc.text('Receita geral (base de cálculo):', labelX, y, { align: 'right' });
         bold();
         cor(26, 23, 20);
-        doc.text(fmtNum(receitaGeral), col6, y, { align: 'right' });
+        doc.text(fmtNum(receitaGeral), col.fat, y, { align: 'right' });
         y += 5;
       } else {
         normal();
-        doc.setFontSize(7.5);
-        cor(107, 101, 96);
-        doc.text('Faturamento bruto:', labelX, y, { align: 'right' });
+        doc.setFontSize(8);
+        cor(80, 75, 70);
+        doc.text('Faturamento bruto (itens):', labelX, y, { align: 'right' });
         bold();
         cor(26, 23, 20);
-        doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
+        doc.text(fmtNum(totalFat), col.fat, y, { align: 'right' });
         y += 5;
       }
-      
-      doc.setDrawColor(180, 175, 168);
-      doc.line(mx, y, W - mx, y);
-      y += 4;
-      
+
+      // RESULTADO
       const resCor = resultado >= 0 ? [58, 107, 28] : [139, 32, 32];
-      const resBg = resultado >= 0 ? [237, 243, 232] : [253, 240, 240];
+      const resBg  = resultado >= 0 ? [237, 243, 232] : [253, 240, 240];
       doc.setFillColor(...resBg);
-      doc.rect(mx, y - 2, W - mx * 2, 8, 'F');
+      doc.rect(mx, y - 2, W - mx * 2, 10, 'F');
       bold();
-      doc.setFontSize(9);
+      doc.setFontSize(10);
       cor(...resCor);
-      doc.text('RESULTADO:', labelX, y + 3, { align: 'right' });
-      doc.text(fmtNum(resultado), col6, y + 3, { align: 'right' });
-      y += 11;
-      
+      doc.text('RESULTADO DO EVENTO:', labelX, y + 3, { align: 'right' });
+      doc.text(fmtNum(resultado), col.fat, y + 3, { align: 'right' });
+      y += 14;
+
+      // ASSINATURAS
       normal();
-      doc.setFontSize(6);
-      cor(160, 153, 144);
-      const agora = new Date().toLocaleDateString('pt-BR') + ' ' + new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' });
-      doc.text('Gerado em ' + agora + ' - Contai', mx, y);
-      
+      doc.setFontSize(7.5);
+      cor(80, 75, 70);
+      doc.text(`Gerado em: ${fmtDataHora()}`, mx, y);
+      y += 12;
+
+      doc.setDrawColor(150, 145, 138);
+      doc.setLineWidth(0.2);
+      doc.line(mx + 10, y, mx + 80, y);
+      doc.line(W - mx - 70, y, W - mx - 10, y);
+      doc.setFontSize(7);
+      cor(100, 95, 90);
+      doc.text('Assinatura do Coordenador', mx + 45, y + 4, { align: 'center' });
+      doc.text('Assinatura do Responsável Geral', W - mx - 40, y + 4, { align: 'center' });
+
       const nomeLimpo = (ev.nome || 'evento').replace(/[^a-zA-Z0-9 ]/g, '').trim().replace(/\s+/g, '_').slice(0, 40);
-      doc.save('nota_' + nomeLimpo + '.pdf');
-      toast('PDF gerado!');
+      doc.save(`NFS-e_${ev.numeroNota}_${nomeLimpo}.pdf`);
+      toast('PDF gerado com sucesso!');
     } catch (e) {
       console.error(e);
       toast('Erro ao gerar PDF: ' + e.message);
@@ -740,12 +776,9 @@ function baixarPDF() {
     btn.textContent = 'Baixar PDF';
     btn.disabled = false;
   }
-  
-  if (window.jspdf) {
-    gerar();
-    return;
-  }
-  
+
+  if (window.jspdf) { gerar(); return; }
+
   const s = document.createElement('script');
   s.src = 'https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js';
   s.onload = gerar;
@@ -761,7 +794,7 @@ function baixarPDF() {
 function renderDashboard() {
   const evs = loadEvents();
   const el = document.getElementById('dash-content');
-  
+
   if (!evs.length) {
     el.innerHTML = `<div class="empty-state" style="padding-top:4rem">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.3" stroke-linecap="round" width="48" height="48">
@@ -771,13 +804,12 @@ function renderDashboard() {
     </div>`;
     return;
   }
-  
-  const totalDesp = evs.reduce((s, ev) => s + calcResultadoEvento(ev).desp, 0);
-  const totalFat  = evs.reduce((s, ev) => s + calcResultadoEvento(ev).receita, 0);
+
+  const totalDesp  = evs.reduce((s, ev) => s + calcResultadoEvento(ev).desp, 0);
+  const totalFat   = evs.reduce((s, ev) => s + calcResultadoEvento(ev).receita, 0);
   const totalLucro = totalFat - totalDesp;
   const lucroClass = totalLucro >= 0 ? 'pos' : 'neg';
-  
-  // Por categoria
+
   const catTotals = {};
   CATS.forEach(c => catTotals[c] = 0);
   evs.forEach(ev => (ev.items || []).forEach(r => {
@@ -785,7 +817,7 @@ function renderDashboard() {
     if (catTotals[r.cat] !== undefined) catTotals[r.cat] += sub;
   }));
   const maxCat = Math.max(...Object.values(catTotals), 1);
-  
+
   const barras = CATS.map(cat => {
     const pct = Math.round((catTotals[cat] / maxCat) * 100);
     return `<div class="cat-bar">
@@ -793,19 +825,19 @@ function renderDashboard() {
       <div class="cat-bar-track"><div class="cat-bar-fill ${BAR_CLASS[cat]}" style="width:${pct}%"></div></div>
     </div>`;
   }).join('');
-  
+
   const recentes = evs.slice(0, 5).map(ev => {
     const { resultado: lucro } = calcResultadoEvento(ev);
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
       <div>
         <div style="font-size:14px;font-weight:500">${esc(ev.nome)}</div>
-        <div style="font-size:12px;color:var(--text3)">${ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—'}</div>
+        <div style="font-size:12px;color:var(--text3)">NFS-e ${ev.numeroNota || '—'} · ${ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short' }) : '—'}</div>
       </div>
       <div class="ev-card-val ${cls}" style="font-size:15px">${fmt(lucro)}</div>
     </div>`;
   }).join('');
-  
+
   el.innerHTML = `
     <div class="card">
       <div class="card-title">Visão geral — ${evs.length} evento${evs.length > 1 ? 's' : ''}</div>
@@ -815,7 +847,7 @@ function renderDashboard() {
           <div class="metric-value">${fmt(totalDesp)}</div>
         </div>
         <div class="dash-metric">
-          <div class="metric-label">Faturamento total</div>
+          <div class="metric-label">Faturamento / Receita total</div>
           <div class="metric-value">${fmt(totalFat)}</div>
         </div>
         <div class="dash-metric dash-big ${lucroClass}">
@@ -842,16 +874,16 @@ function initEventListeners() {
       if (page) goPage(page);
     });
   });
-  
+
   const salvarBtn = document.getElementById('salvar-evento');
   if (salvarBtn) salvarBtn.addEventListener('click', salvarEvento);
-  
+
   const limparBtn = document.getElementById('limpar-form');
   if (limparBtn) limparBtn.addEventListener('click', limparFormulario);
-  
+
   const addBtn = document.getElementById('add-row-btn');
   if (addBtn) addBtn.addEventListener('click', () => addRow());
-  
+
   const receitaInput = document.getElementById('ev-receita');
   if (receitaInput) receitaInput.addEventListener('input', updateTotals);
 
