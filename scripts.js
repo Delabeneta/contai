@@ -118,12 +118,20 @@ function mobileRecalc(id, card) {
   const r = rows.find(r => r.id === id);
   if (!r) return;
   const custoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
-  
-  const el = card.querySelector(`#mcusto-${id}`);
-  if (el) {
-    el.textContent = custoTotal > 0 ? fmt(custoTotal) : '—';
-    el.className = 'mi-sub' + (custoTotal > 0 ? '' : ' zero');
+  const faturamentoTotal = (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0);
+
+  const elCusto = card.querySelector(`#mcusto-${id}`);
+  if (elCusto) {
+    elCusto.textContent = custoTotal > 0 ? fmt(custoTotal) : '—';
+    elCusto.className = 'mi-sub' + (custoTotal > 0 ? '' : ' zero');
   }
+
+  const elFat = card.querySelector(`#mfat-${id}`);
+  if (elFat) {
+    elFat.textContent = faturamentoTotal > 0 ? fmt(faturamentoTotal) : '—';
+    elFat.className = 'mi-sub' + (faturamentoTotal > 0 ? '' : ' zero');
+  }
+
   recalcSub(id);
 }
 
@@ -135,13 +143,32 @@ function calcFaturamento() {
   return rows.reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
 }
 
+function calcResultadoEvento(ev) {
+  const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
+  const fat  = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
+  const receitaGeral = parseFloat(ev.receita) || 0;
+  const usaReceita = receitaGeral > 0;
+  const receita = usaReceita ? receitaGeral : fat;
+  const resultado = receita - desp;
+  return { desp, fat, receitaGeral, usaReceita, receita, resultado };
+}
+
 function updateTotals() {
   const custoTotal = calcDesp();
   const faturamento = calcFaturamento();
-  const resultado = faturamento - custoTotal;
-  
+  const receitaGeral = parseFloat(document.getElementById('ev-receita').value) || 0;
+  const usaReceita = receitaGeral > 0;
+  const receita = usaReceita ? receitaGeral : faturamento;
+  const resultado = receita - custoTotal;
+
   document.getElementById('m-desp').textContent = fmt(custoTotal);
-  document.getElementById('m-faturamento').textContent = fmt(faturamento);
+
+  // Label e valor do meio mudam conforme o modo
+  const labelFat = document.getElementById('m-fat-label');
+  const valFat   = document.getElementById('m-faturamento');
+  if (labelFat) labelFat.textContent = usaReceita ? 'Receita geral' : 'Faturamento';
+  if (valFat)   valFat.textContent   = fmt(receita);
+
   document.getElementById('m-lucro').textContent = fmt(resultado);
   
   const el = document.getElementById('m-res-card');
@@ -182,7 +209,7 @@ function renderRows() {
         </svg></button></td>`;
     tbody.appendChild(tr);
 
-    // Mobile card
+    // Mobile card 
     const div = document.createElement('div');
     div.className = 'mobile-item';
     div.innerHTML = `
@@ -205,7 +232,16 @@ function renderRows() {
           oninput="updateField(${r.id},'precoCusto',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
         <input type="number" value="${r.precoVenda}" min="0" step="0.01" placeholder="Venda"
           oninput="updateField(${r.id},'precoVenda',this.value);mobileRecalc(${r.id},this.closest('.mobile-item'))" />
-        <div class="mi-sub${custoTotal > 0 ? '' : ' zero'}" id="mcusto-${r.id}">${custoTotal > 0 ? fmt(custoTotal) : '—'}</div>
+      </div>
+      <div class="mi-totals">
+        <div class="mi-total-item">
+          <span class="mi-total-label">Custo total</span>
+          <span class="mi-sub${custoTotal > 0 ? '' : ' zero'}" id="mcusto-${r.id}">${custoTotal > 0 ? fmt(custoTotal) : '—'}</span>
+        </div>
+        <div class="mi-total-item">
+          <span class="mi-total-label">Faturamento</span>
+          <span class="mi-sub${faturamentoTotal > 0 ? '' : ' zero'}" id="mfat-${r.id}">${faturamentoTotal > 0 ? fmt(faturamentoTotal) : '—'}</span>
+        </div>
       </div>`;
     mobileEl.appendChild(div);
   });
@@ -226,6 +262,7 @@ function salvarEvento() {
     nome,
     data: document.getElementById('ev-data').value,
     resp: document.getElementById('ev-resp').value.trim(),
+    receita: parseFloat(document.getElementById('ev-receita').value) || 0,
     obs: document.getElementById('ev-obs').value.trim(),
     items: rows.map(r => ({ 
       id: r.id,
@@ -258,6 +295,7 @@ function limparFormulario() {
   document.getElementById('ev-resp').value = '';
   document.getElementById('ev-obs').value = '';
   document.getElementById('ev-data').value = hoje();
+  document.getElementById('ev-receita').value = '';
   
   rows = [];
   rid = 0;
@@ -279,6 +317,7 @@ function editarEvento(id) {
   document.getElementById('ev-data').value = ev.data || hoje();
   document.getElementById('ev-resp').value = ev.resp || '';
   document.getElementById('ev-obs').value = ev.obs || '';
+  document.getElementById('ev-receita').value = ev.receita || '';
   
   rows = [];
   rid = 0;
@@ -329,9 +368,7 @@ function renderHistorico() {
   }
   
   el.innerHTML = evs.map(ev => {
-    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
-    const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
-    const lucro = fat - desp;
+    const { resultado: lucro } = calcResultadoEvento(ev);
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'short', year: 'numeric' }) : '—';
     const nitens = (ev.items || []).filter(r => r.desc).length;
@@ -339,7 +376,7 @@ function renderHistorico() {
     return `<div class="ev-card">
       <div class="ev-card-left">
         <div class="ev-card-nome">${esc(ev.nome)}</div>
-        <div class="ev-card-sub">${dataFmt} · ${nitens} ite${nitens === 1 ? 'm' : 'ns'} · ${ev.resp || '—'}</div>
+        <div class="ev-card-sub">${dataFmt} · ${nitens} ite${nitens === 1 ? 'm' : 'ns'}${ev.resp ? ' · ' + esc(ev.resp) : ''}</div>
         <div class="ev-card-actions">
           <button class="btn-sec" style="padding:5px 12px;font-size:12px" onclick="editarEvento('${ev.id}')">Editar</button>
           <button class="btn-sec" style="padding:5px 12px;font-size:12px" onclick="verNota('${ev.id}')">Ver nota</button>
@@ -359,7 +396,10 @@ function renderHistorico() {
 }
 
 function verNota(id) {
+  const evs = loadEvents();
   const sel = document.getElementById('nota-select');
+  sel.innerHTML = '<option value="">— Escolha um evento —</option>' +
+    evs.map(e => `<option value="${e.id}">${esc(e.nome)}</option>`).join('');
   sel.value = id;
   goPage('nota');
   renderNota();
@@ -400,9 +440,7 @@ function renderNota() {
 
 function gerarTextoNota(ev) {
   const dataFmt = ev.data ? new Date(ev.data + 'T12:00:00').toLocaleDateString('pt-BR', { day: '2-digit', month: 'long', year: 'numeric' }) : '—';
-  const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
-  const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
-  const lucro = fat - desp;
+  const { desp, fat, receitaGeral, usaReceita, receita, resultado } = calcResultadoEvento(ev);
   const SEP = '─'.repeat(60);
   const SEP2 = '═'.repeat(60);
   
@@ -418,16 +456,21 @@ function gerarTextoNota(ev) {
     if (!items.length) return;
     linhas += `\n  ${cat.toUpperCase()}\n`;
     items.forEach(r => {
-      const sub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
-      const desc = (r.desc || '').slice(0, 26).padEnd(26);
-      const qtyStr = parseInt(r.qty) > 1 ? `${r.qty}x` : '  ';
-      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.precoCusto) || 0).padStart(12)}   ${fmt(sub).padStart(12)}\n`;
+      const custoSub = (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0);
+      const desc = (r.desc || '').slice(0, 22).padEnd(22);
+      const qtyStr = parseInt(r.qty) > 1 ? `${r.qty}x` : '   ';
+      const vendaStr = parseFloat(r.precoVenda) > 0 ? fmt(parseFloat(r.precoVenda) || 0).padStart(12) : '            —';
+      linhas += `  ${desc}  ${qtyStr.padStart(3)} ${fmt(parseFloat(r.precoCusto) || 0).padStart(12)}  ${vendaStr}  ${fmt(custoSub).padStart(12)}\n`;
     });
   });
-  
-  let nota = `${SEP2}\n  MESA & CONTA — NOTA DESCRITIVA\n${SEP2}\n\n  Evento:       ${ev.nome}\n  Data:         ${dataFmt}\n  Responsável:  ${ev.resp || '—'}\n`;
+
+  const receitaLinha = usaReceita
+    ? `  Receita geral (informada):                             ${fmt(receitaGeral).padStart(12)}\n  Faturamento dos itens:                                  ${fmt(fat).padStart(12)}\n`
+    : `  Faturamento bruto (itens):                             ${fmt(fat).padStart(12)}\n`;
+
+  let nota = `${SEP2}\n  CONTAI — NOTA DESCRITIVA\n${SEP2}\n\n  Evento:       ${ev.nome}\n  Data:         ${dataFmt}\n  Responsável:  ${ev.resp || '—'}\n`;
   if (ev.obs) nota += `  Obs:          ${ev.obs}\n`;
-  nota += `\n${SEP}\n  ITEM                        QTD   PREÇO CUSTO       CUSTO TOTAL\n${SEP}\n${linhas}\n${SEP}\n  Total de despesas (custo):                     ${fmt(desp).padStart(12)}\n  Faturamento bruto:                             ${fmt(fat).padStart(12)}\n${SEP2}\n  RESULTADO:                                     ${fmt(lucro).padStart(12)}\n${SEP2}\n\n  Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
+  nota += `\n${SEP}\n  ITEM                    QTD   CUSTO UNIT    VENDA UNIT    CUSTO TOTAL\n${SEP}\n${linhas}\n${SEP}\n  Total de despesas (custo):                              ${fmt(desp).padStart(12)}\n${receitaLinha}${SEP2}\n  RESULTADO:                                              ${fmt(resultado).padStart(12)}\n${SEP2}\n\n  Gerado em: ${new Date().toLocaleDateString('pt-BR')} às ${new Date().toLocaleTimeString('pt-BR', { hour: '2-digit', minute: '2-digit' })}`;
   return nota;
 }
 
@@ -443,7 +486,6 @@ function copiarNota() {
     }
   });
 }
-
 
 // ==================== PDF ====================
 function baixarPDF() {
@@ -469,10 +511,9 @@ function baixarPDF() {
       }
       
       const { jsPDF } = window.jspdf;
-      // A4 retrato: 210 x 297mm
       const doc = new jsPDF({ unit: 'mm', format: 'a4', orientation: 'portrait' });
-      const W = doc.internal.pageSize.getWidth(); // 210
-      const H = doc.internal.pageSize.getHeight(); // 297
+      const W = doc.internal.pageSize.getWidth();
+      const H = doc.internal.pageSize.getHeight();
       const mx = 12;
       let y = 30;
       
@@ -512,7 +553,6 @@ function baixarPDF() {
       normal();
       doc.setFontSize(7.5);
       cor(107, 101, 96);
-      // Info numa linha só se couber
       let infoLine = dataFmt;
       if (ev.resp) infoLine += '   Resp: ' + ev.resp;
       doc.text(infoLine, mx, y);
@@ -529,17 +569,13 @@ function baixarPDF() {
       doc.line(mx, y, W - mx, y);
       y += 3;
       
-      // Colunas ajustadas para A4 retrato (186mm úteis)
-      // col1: ITEM (começa em mx=12, vai até col2)
-      // larguras: Item=70, Qtd=12, Custo=28, Venda=28, CustoTot=28, Fat=rest
-      const col1 = mx;          // ITEM: 12
-      const col2 = mx + 70;     // QTD: 82
-      const col3 = mx + 84;     // CUSTO UNIT: 96
-      const col4 = mx + 112;    // VENDA UNIT: 124
-      const col5 = mx + 140;    // CUSTO TOT: 152
-      const col6 = W - mx;      // FATURAMENTO (direita): 198
+      const col1 = mx;
+      const col2 = mx + 70;
+      const col3 = mx + 84;
+      const col4 = mx + 112;
+      const col5 = mx + 140;
+      const col6 = W - mx;
 
-      // Largura máxima para a descrição quebrar linha
       const maxDescWidth = col2 - col1 - 3;
       
       // Cabeçalho da tabela
@@ -566,15 +602,14 @@ function baixarPDF() {
       let totalCusto = 0;
       let totalFaturamento = 0;
       let alt = false;
-      const LINE_H = 4.0;  // altura de cada linha de texto
-      const ROW_PAD = 1.5; // padding vertical por célula
+      const LINE_H = 4.0;
+      const ROW_PAD = 1.5;
       
       CATS.forEach(cat => {
         const items = grupos[cat];
         if (!items.length) return;
         checkPage(7);
         
-        // Categoria header
         doc.setFillColor(248, 245, 240);
         doc.rect(mx, y - 2.5, W - mx * 2, 4.5, 'F');
         bold();
@@ -589,7 +624,6 @@ function baixarPDF() {
           totalCusto += custoTotal;
           totalFaturamento += faturamentoTotal;
 
-          // Quebra de linha do nome
           doc.setFontSize(7);
           normal();
           const descLines = doc.splitTextToSize(r.desc || '', maxDescWidth);
@@ -603,10 +637,8 @@ function baixarPDF() {
           }
           alt = !alt;
           
-          // Centro vertical para valores numéricos
           const midY = y + (descLines.length - 1) * LINE_H / 2;
 
-          // Descrição (com quebra de linha)
           normal();
           doc.setFontSize(7);
           cor(26, 23, 20);
@@ -614,7 +646,6 @@ function baixarPDF() {
             doc.text(line, col1 + 1, y + i * LINE_H);
           });
           
-          // Valores numéricos
           cor(90, 85, 80);
           doc.setFontSize(6.5);
           doc.text(String(parseInt(r.qty) || 1), col2 + 6, midY, { align: 'center' });
@@ -637,8 +668,8 @@ function baixarPDF() {
       doc.line(mx, y, W - mx, y);
       y += 4;
       
-      // Totais — label à esquerda do col5, valor alinhado à direita em col6
       const labelX = col5 - 2;
+      const { receitaGeral, usaReceita, receita: receitaFinal, resultado } = calcResultadoEvento(ev);
 
       normal();
       doc.setFontSize(7.5);
@@ -648,22 +679,40 @@ function baixarPDF() {
       cor(26, 23, 20);
       doc.text(fmtNum(totalCusto), col6, y, { align: 'right' });
       y += 5;
-      
-      normal();
-      doc.setFontSize(7.5);
-      cor(107, 101, 96);
-      doc.text('Faturamento bruto:', labelX, y, { align: 'right' });
-      bold();
-      cor(26, 23, 20);
-      doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
-      y += 4;
+
+      if (usaReceita) {
+        normal();
+        doc.setFontSize(7.5);
+        cor(107, 101, 96);
+        doc.text('Faturamento dos itens:', labelX, y, { align: 'right' });
+        bold();
+        cor(26, 23, 20);
+        doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
+        y += 5;
+
+        normal();
+        doc.setFontSize(7.5);
+        cor(107, 101, 96);
+        doc.text('Receita geral (informada):', labelX, y, { align: 'right' });
+        bold();
+        cor(26, 23, 20);
+        doc.text(fmtNum(receitaGeral), col6, y, { align: 'right' });
+        y += 5;
+      } else {
+        normal();
+        doc.setFontSize(7.5);
+        cor(107, 101, 96);
+        doc.text('Faturamento bruto:', labelX, y, { align: 'right' });
+        bold();
+        cor(26, 23, 20);
+        doc.text(fmtNum(totalFaturamento), col6, y, { align: 'right' });
+        y += 5;
+      }
       
       doc.setDrawColor(180, 175, 168);
       doc.line(mx, y, W - mx, y);
       y += 4;
       
-      // Resultado destacado
-      const resultado = totalFaturamento - totalCusto;
       const resCor = resultado >= 0 ? [58, 107, 28] : [139, 32, 32];
       const resBg = resultado >= 0 ? [237, 243, 232] : [253, 240, 240];
       doc.setFillColor(...resBg);
@@ -675,7 +724,6 @@ function baixarPDF() {
       doc.text(fmtNum(resultado), col6, y + 3, { align: 'right' });
       y += 11;
       
-      // Rodapé
       normal();
       doc.setFontSize(6);
       cor(160, 153, 144);
@@ -724,12 +772,8 @@ function renderDashboard() {
     return;
   }
   
-  const totalDesp = evs.reduce((s, ev) => {
-    return s + (ev.items || []).reduce((ss, r) => ss + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
-  }, 0);
-  const totalFat = evs.reduce((s, ev) => {
-    return s + (ev.items || []).reduce((ss, r) => ss + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
-  }, 0);
+  const totalDesp = evs.reduce((s, ev) => s + calcResultadoEvento(ev).desp, 0);
+  const totalFat  = evs.reduce((s, ev) => s + calcResultadoEvento(ev).receita, 0);
   const totalLucro = totalFat - totalDesp;
   const lucroClass = totalLucro >= 0 ? 'pos' : 'neg';
   
@@ -751,9 +795,7 @@ function renderDashboard() {
   }).join('');
   
   const recentes = evs.slice(0, 5).map(ev => {
-    const desp = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoCusto) || 0), 0);
-    const fat = (ev.items || []).reduce((s, r) => s + (parseFloat(r.qty) || 0) * (parseFloat(r.precoVenda) || 0), 0);
-    const lucro = fat - desp;
+    const { resultado: lucro } = calcResultadoEvento(ev);
     const cls = lucro > 0 ? 'pos' : lucro < 0 ? 'neg' : 'neu';
     return `<div style="display:flex;justify-content:space-between;align-items:center;padding:9px 0;border-bottom:1px solid var(--border)">
       <div>
@@ -810,6 +852,9 @@ function initEventListeners() {
   const addBtn = document.getElementById('add-row-btn');
   if (addBtn) addBtn.addEventListener('click', () => addRow());
   
+  const receitaInput = document.getElementById('ev-receita');
+  if (receitaInput) receitaInput.addEventListener('input', updateTotals);
+
   const notaSelect = document.getElementById('nota-select');
   if (notaSelect) notaSelect.addEventListener('change', renderNota);
 }

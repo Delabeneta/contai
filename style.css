@@ -91,7 +91,6 @@ nav {
   display: flex;
   align-items: stretch;
   flex-shrink: 0;
-  padding-bottom: env(safe-area-inset-bottom);
 }
 
 .nav-btn {
@@ -227,6 +226,7 @@ nav {
   min-height: 72px;
 }
 
+/* ==================== TABELA ==================== */
 .table-wrap {
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
@@ -235,7 +235,7 @@ nav {
 table {
   width: 100%;
   border-collapse: collapse;
-  min-width: 480px;
+  min-width: 520px;
 }
 
 thead th {
@@ -371,6 +371,7 @@ tbody tr:last-child td {
   color: var(--accent-text);
 }
 
+/* ==================== MOBILE ITEMS ==================== */
 @media (max-width: 520px) {
   .table-wrap, table, thead {
     display: none;
@@ -420,7 +421,7 @@ tbody tr:last-child td {
   
   .mi-bottom {
     display: grid;
-    grid-template-columns: 1fr 50px 70px 70px 60px;
+    grid-template-columns: 1fr 50px 72px 72px;
     gap: 6px;
     align-items: center;
   }
@@ -461,13 +462,34 @@ tbody tr:last-child td {
     outline: none;
     border-color: var(--accent-text);
   }
-  
+
+  .mi-totals {
+    display: flex;
+    justify-content: flex-end;
+    gap: 16px;
+    padding-top: 2px;
+    border-top: 1px solid var(--border);
+  }
+
+  .mi-total-item {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 1px;
+  }
+
+  .mi-total-label {
+    font-size: 10px;
+    color: var(--text3);
+    text-transform: uppercase;
+    letter-spacing: 0.05em;
+  }
+
   .mi-sub {
     font-size: 13px;
     font-weight: 500;
-    text-align: right;
-    white-space: nowrap;
     color: var(--text);
+    white-space: nowrap;
   }
   
   .mi-sub.zero {
@@ -485,16 +507,19 @@ tbody tr:last-child td {
   }
 }
 
+/* ==================== MÉTRICAS ==================== */
 .metrics-grid {
   display: grid;
   grid-template-columns: repeat(3, 1fr);
   gap: 10px;
 }
 
-
 @media (max-width: 420px) {
   .metrics-grid {
     grid-template-columns: 1fr 1fr;
+  }
+  .metrics-grid #m-res-card {
+    grid-column: 1 / -1;
   }
 }
 
@@ -539,6 +564,7 @@ tbody tr:last-child td {
   color: var(--danger);
 }
 
+/* ==================== BOTÕES ==================== */
 .btn-primary {
   padding: 10px 20px;
   font-size: 14px;
@@ -597,8 +623,10 @@ tbody tr:last-child td {
   display: flex;
   gap: 10px;
   flex-wrap: wrap;
+  align-items: center;
 }
 
+/* ==================== BADGES ==================== */
 .badge {
   display: inline-block;
   font-size: 11px;
@@ -607,37 +635,25 @@ tbody tr:last-child td {
   border-radius: 20px;
 }
 
-.b-compra {
-  background: var(--blue-bg);
-  color: var(--blue);
-}
+.b-compra { background: var(--blue-bg); color: var(--blue); }
+.b-doacao { background: var(--amber-bg); color: var(--amber); }
+.b-taxa   { background: var(--danger-bg); color: var(--danger); }
+.b-outro  { background: var(--surface2); color: var(--text2); }
 
-.b-doacao {
-  background: var(--amber-bg);
-  color: var(--amber);
-}
-
-.b-taxa {
-  background: var(--danger-bg);
-  color: var(--danger);
-}
-
-.b-outro {
-  background: var(--surface2);
-  color: var(--text2);
-}
-
+/* ==================== NOTA ==================== */
 .nota-pre {
   background: var(--text);
   color: #E8E4DE;
   border-radius: var(--radius);
   padding: 1.25rem;
   font-family: 'Courier New', monospace;
-  font-size: 12.5px;
+  font-size: 12px;
   line-height: 1.75;
   white-space: pre;
   overflow-x: auto;
   -webkit-overflow-scrolling: touch;
+  max-width: 100%;
+  word-break: keep-all;
 }
 
 .copied-msg {
@@ -647,16 +663,16 @@ tbody tr:last-child td {
   padding-top: 2px;
 }
 
+/* ==================== HISTÓRICO ==================== */
 .ev-card {
   background: var(--surface);
   border: 1px solid var(--border);
   border-radius: var(--radius-lg);
   padding: 1rem 1.25rem;
   margin-bottom: 10px;
-  cursor: pointer;
   transition: all 0.15s;
   display: flex;
-  align-items: center;
+  align-items: flex-start;
   justify-content: space-between;
   gap: 12px;
 }
@@ -688,6 +704,7 @@ tbody tr:last-child td {
 .ev-card-right {
   text-align: right;
   flex-shrink: 0;
+  padding-top: 2px;
 }
 
 .ev-card-val {
@@ -696,23 +713,15 @@ tbody tr:last-child td {
   font-family: 'Playfair Display', serif;
 }
 
-.ev-card-val.pos {
-  color: var(--accent-text);
-}
-
-.ev-card-val.neg {
-  color: var(--danger);
-}
-
-.ev-card-val.neu {
-  color: var(--text2);
-}
+.ev-card-val.pos { color: var(--accent-text); }
+.ev-card-val.neg { color: var(--danger); }
+.ev-card-val.neu { color: var(--text2); }
 
 .ev-card-actions {
   display: flex;
   gap: 6px;
-  margin-top: 6px;
-  justify-content: flex-end;
+  margin-top: 8px;
+  align-items: center;
 }
 
 .ev-delete-btn {
@@ -723,6 +732,9 @@ tbody tr:last-child td {
   padding: 4px;
   border-radius: 6px;
   transition: all 0.12s;
+  display: flex;
+  align-items: center;
+  justify-content: center;
 }
 
 .ev-delete-btn:hover {
@@ -730,6 +742,7 @@ tbody tr:last-child td {
   background: var(--danger-bg);
 }
 
+/* ==================== ESTADOS VAZIOS ==================== */
 .empty-state {
   text-align: center;
   padding: 3rem 1rem;
@@ -747,6 +760,7 @@ tbody tr:last-child td {
   font-size: 14px;
 }
 
+/* ==================== DASHBOARD ==================== */
 .dash-metrics {
   display: grid;
   grid-template-columns: 1fr 1fr;
@@ -755,7 +769,7 @@ tbody tr:last-child td {
 }
 
 .dash-big {
-  grid-column: 1/-1;
+  grid-column: 1 / -1;
 }
 
 .dash-metric {
@@ -781,22 +795,8 @@ tbody tr:last-child td {
   color: var(--text);
 }
 
-.dash-metric.pos .metric-value {
-  color: var(--accent-text);
-}
-
-.dash-metric.neg .metric-value {
-  color: var(--danger);
-}
-
-.recent-title {
-  font-size: 12px;
-  font-weight: 500;
-  letter-spacing: 0.07em;
-  text-transform: uppercase;
-  color: var(--text3);
-  margin-bottom: 10px;
-}
+.dash-metric.pos .metric-value { color: var(--accent-text); }
+.dash-metric.neg .metric-value { color: var(--danger); }
 
 .cat-bar {
   margin-bottom: 8px;
@@ -823,22 +823,12 @@ tbody tr:last-child td {
   transition: width 0.4s ease;
 }
 
-.bar-compra {
-  background: var(--blue);
-}
+.bar-compra { background: var(--blue); }
+.bar-doacao { background: var(--amber); }
+.bar-taxa   { background: var(--danger); }
+.bar-outro  { background: var(--text3); }
 
-.bar-doacao {
-  background: var(--amber);
-}
-
-.bar-taxa {
-  background: var(--danger);
-}
-
-.bar-outro {
-  background: var(--text3);
-}
-
+/* ==================== NOTA SELECT ==================== */
 .select-ev-msg {
   text-align: center;
   padding: 2rem;
@@ -846,9 +836,10 @@ tbody tr:last-child td {
   font-size: 14px;
 }
 
+/* ==================== TOAST ==================== */
 #toast {
   position: fixed;
-  bottom: calc(var(--nav-h) + 12px);
+  bottom: calc(var(--nav-h) + var(--footer-h) + 12px);
   left: 50%;
   transform: translateX(-50%) translateY(20px);
   background: var(--text);
@@ -866,4 +857,47 @@ tbody tr:last-child td {
 #toast.show {
   opacity: 1;
   transform: translateX(-50%) translateY(0);
+}
+
+/* ==================== RODAPÉ ==================== */
+:root {
+  --footer-h: 36px;
+}
+
+.app-footer {
+  height: var(--footer-h);
+  background: var(--text);
+  color: var(--text3);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  font-size: 11px;
+  letter-spacing: 0.04em;
+  flex-shrink: 0;
+  padding-bottom: env(safe-area-inset-bottom);
+}
+
+.footer-sep {
+  opacity: 0.4;
+}
+
+.footer-link {
+  color: #A8C58A;
+  text-decoration: none;
+  font-weight: 500;
+  transition: opacity 0.15s;
+}
+
+.footer-link:hover {
+  opacity: 0.75;
+}
+
+/* ==================== FIELD HINT ==================== */
+.field-hint {
+  font-size: 10px;
+  color: var(--text3);
+  font-weight: 400;
+  font-style: italic;
+  letter-spacing: 0;
 }
